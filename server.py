@@ -1,6 +1,7 @@
 import os
 import time
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -76,9 +77,9 @@ def make_feedback_call(customer_phone: str, case_id: str, customer_name: str) ->
         return {"status": "ERROR", "message": "No phone number provided"}
 
     twiml_url = (
-        f"{TWIML_BIN_URL}"
-        f"?case_id={case_id}"
-        f"&name={customer_name}"
+        f"{TWIML_BIN_URL.strip()}"
+        f"?case_id={quote(case_id)}"
+        f"&name={quote(customer_name)}"
     )
 
     url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls.json"
