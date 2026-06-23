@@ -154,6 +154,11 @@ def send_case_update_sms(customer_phone: str, case_number: str, customer_name: s
     }
 
 
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
+
+
 TOOL_MAP = {
     "get_fare_details": get_fare_details,
     "generate_payment_qr": generate_payment_qr,
