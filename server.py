@@ -109,5 +109,48 @@ def make_feedback_call(customer_phone: str, case_id: str, customer_name: str) ->
     }
 
 
+@mcp.tool()
+def send_case_update_sms(customer_phone: str, case_number: str, customer_name: str, status: str, message: str) -> dict:
+    """Send an SMS notification to the customer when a Salesforce case status changes."""
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
+        return {"status": "ERROR", "message": "Twilio credentials not configured"}
+
+    if not customer_phone:
+        return {"status": "ERROR", "message": "No phone number provided"}
+
+    sms_body = (
+        f"Hi {customer_name}, your support case {case_number} "
+        f"has been updated to: {status}. {message}"
+    )
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json"
+    response = httpx.post(
+        url,
+        auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN),
+        data={
+            "To": customer_phone,
+            "From": TWILIO_PHONE_NUMBER,
+            "Body": sms_body,
+        },
+        timeout=30.0,
+    )
+
+    if response.status_code == 201:
+        sms_data = response.json()
+        return {
+            "status": "SMS_SENT",
+            "message_sid": sms_data.get("sid"),
+            "to": customer_phone,
+            "case_number": case_number,
+            "sent_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    return {
+        "status": "FAILED",
+        "error": response.text,
+        "status_code": response.status_code,
+    }
+
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")
