@@ -171,16 +171,19 @@ TOOL_MAP = {
 
 @mcp.custom_route("/execute", methods=["POST"])
 async def execute_tool(request: Request) -> JSONResponse:
-    body = await request.json()
-    tool_name = body.get("tool")
-    parameters = body.get("parameters", {})
+    try:
+        body = await request.json()
+        tool_name = body.get("tool")
+        parameters = body.get("parameters", {})
 
-    fn = TOOL_MAP.get(tool_name)
-    if not fn:
-        return JSONResponse({"error": f"Tool '{tool_name}' not found"}, status_code=404)
+        fn = TOOL_MAP.get(tool_name)
+        if not fn:
+            return JSONResponse({"error": f"Tool '{tool_name}' not found"}, status_code=404)
 
-    result = fn(**parameters)
-    return JSONResponse({"result": result})
+        result = fn(**parameters)
+        return JSONResponse({"result": result})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 if __name__ == "__main__":
