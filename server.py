@@ -10,10 +10,10 @@ from starlette.responses import JSONResponse
 
 mcp = FastMCP("Railway Ticket Booking", host="0.0.0.0", port=int(os.environ.get("PORT", 8001)))
 
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
-TWIML_BIN_URL = os.environ.get("TWIML_BIN_URL", "")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "").strip()
+TWIML_BIN_URL = os.environ.get("TWIML_BIN_URL", "").strip()
 
 FARES = {
     "sodepur": {"fare": 10, "time": "12:24 PM", "platform": 7, "distance": "17 km"},
