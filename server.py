@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 mcp = FastMCP("Railway Ticket Booking", host="0.0.0.0", port=int(os.environ.get("PORT", 8001)))
 
@@ -150,6 +152,30 @@ def send_case_update_sms(customer_phone: str, case_number: str, customer_name: s
         "error": response.text,
         "status_code": response.status_code,
     }
+
+
+TOOL_MAP = {
+    "get_fare_details": get_fare_details,
+    "generate_payment_qr": generate_payment_qr,
+    "verify_payment": verify_payment,
+    "generate_ticket": generate_ticket,
+    "make_feedback_call": make_feedback_call,
+    "send_case_update_sms": send_case_update_sms,
+}
+
+
+@mcp.custom_route("/execute", methods=["POST"])
+async def execute_tool(request: Request) -> JSONResponse:
+    body = await request.json()
+    tool_name = body.get("tool")
+    parameters = body.get("parameters", {})
+
+    fn = TOOL_MAP.get(tool_name)
+    if not fn:
+        return JSONResponse({"error": f"Tool '{tool_name}' not found"}, status_code=404)
+
+    result = fn(**parameters)
+    return JSONResponse({"result": result})
 
 
 if __name__ == "__main__":
