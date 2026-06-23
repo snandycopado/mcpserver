@@ -2,9 +2,14 @@ import os
 import time
 from datetime import datetime, timezone
 
+import httpx
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("Railway Ticket Booking", host="0.0.0.0", port=int(os.environ.get("PORT", 8001)))
+
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER", "")
 
 FARES = {
     "sodepur": {"fare": 10, "time": "12:24 PM", "platform": 7, "distance": "17 km"},
@@ -55,6 +60,51 @@ def generate_ticket(booking_ref: str) -> dict:
         "status": "CONFIRMED",
         "valid_for": "Single journey",
         "issued_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@mcp.tool()
+def make_feedback_call(customer_phone: str, case_number: str, customer_name: str) -> dict:
+    """Make an outbound Twilio phone call to collect customer feedback after a Salesforce case is closed."""
+    if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
+        return {"status": "ERROR", "message": "Twilio credentials not configured"}
+
+    twiml = (
+        f"<Response><Say voice='alice'>"
+        f"Hello {customer_name}. This is a feedback call regarding your support case {case_number}. "
+        f"We would love to hear about your experience. "
+        f"Press 1 if you were satisfied, press 2 if you were not satisfied. "
+        f"Thank you for your time."
+        f"</Say>"
+        f"<Gather numDigits='1' action='https://mcpserver-qzse.onrender.com/feedback-response' method='POST'/>"
+        f"</Response>"
+    )
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Calls.json"
+    response = httpx.post(
+        url,
+        auth=(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN),
+        data={
+            "To": customer_phone,
+            "From": TWILIO_PHONE_NUMBER,
+            "Twiml": twiml,
+        },
+    )
+
+    if response.status_code == 201:
+        call_data = response.json()
+        return {
+            "status": "CALL_INITIATED",
+            "call_sid": call_data.get("sid"),
+            "to": customer_phone,
+            "case_number": case_number,
+            "initiated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    return {
+        "status": "FAILED",
+        "error": response.text,
+        "status_code": response.status_code,
     }
 
 
